@@ -1,0 +1,45 @@
+import java.io.IOException;
+import java.util.TreeMap;
+import java.util.Map.Entry;
+
+import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+
+public class Top10TFIDF {
+
+    public static class Top10Mapper extends Mapper<Object, Text, NullWritable, Text> {
+
+        private TreeMap<Double, String> top10Map = new TreeMap<>();
+
+        public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
+            String[] parts = value.toString().split("\\s+");
+            String fileName = parts[0].split("\\|")[1];
+            double tfidf = Double.parseDouble(parts[1]);
+            top10Map.put(tfidf, fileName);
+            // Ne conserver que les 10 premières entrées dans le TreeMap
+            if (top10Map.size() > 10) {
+                top10Map.remove(top10Map.firstKey());
+            }
+        }
+
+        protected void cleanup(Context context) throws IOException, InterruptedException {
+            // Écrit les 10 premières entrées dans le contexte de sortie
+            for (Entry<Double, String> entry : top10Map.descendingMap().entrySet()) {
+                context.write(NullWritable.get(), new Text(entry.getValue() + "\t" + entry.getKey()));
+            }
+        }
+    }
+
+    public static class Top10Reducer extends Reducer<NullWritable, Text, NullWritable, Text> {
+
+        public void reduce(NullWritable key, Iterable<Text> values, Context context)
+                throws IOException, InterruptedException {
+            // Pas besoin d'un Reducer dans ce cas, on écrit simplement les valeurs dans le contexte de sortie
+            for (Text value : values) {
+                context.write(NullWritable.get(), value);
+            }
+        }
+    }
+}

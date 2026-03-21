@@ -1,0 +1,74 @@
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+
+public class TfIdf {
+    static Configuration conf;
+
+    public static void main(String[] args) throws Exception {
+        TfIdf pipeline = new TfIdf();
+        conf = new Configuration();
+        FileSystem fs = FileSystem.get(conf);
+
+        String entree = args[0];
+        String sortie = args[1];
+        int nombreDocuments = Integer.parseInt(args[2]);
+
+        // Lancement du premier MapReduce
+        fs.delete(new Path(sortie + "_1"), true);
+        pipeline.lanceEtape1(entree, sortie + "_1");
+
+        // Lancement du second MapReduce
+        fs.delete(new Path(sortie + "_2"), true);
+        pipeline.lanceEtape2(sortie + "_1", sortie + "_2");
+
+        // Lancement du troisième MapReduce
+        fs.delete(new Path(sortie + "_3"), true);
+        pipeline.lanceEtape3(sortie + "_2", sortie + "_3");
+
+        // Lancement du quatrième MapReduce
+        fs.delete(new Path(sortie + "_4"), true);
+        pipeline.lanceEtape4(sortie + "_3", sortie + "_4", nombreDocuments);
+    }
+
+    public int lanceEtape1(String entree, String sortie) throws Exception {
+        Job job = new Job(conf);
+        job.setJarByClass(TfIdf.class);
+        job.setMapperClass(MR1.MR1Mapper.class);
+        job.setReducerClass(MR1.MR1Reducer.class);
+        job.setInputFormatClass(TextInputFormat.class);
+        job.setOutputFormatClass(TextOutputFormat.class);
+        job.setMapOutputKeyClass(Text.class);
+        job.setMapOutputValueClass(Text.class);
+        job.setOutputKeyClass(Text.class);
+        job.setOutputValueClass(Text.class);
+        FileInputFormat.addInputPath(job, new Path(entree));
+        FileOutputFormat.setOutputPath(job, new Path(sortie));
+        boolean success = job.waitForCompletion(true);
+        return success ? 0 : -1;
+    }
+
+    public int lanceEtape2(String entree, String sortie) throws Exception {
+        // Implémentez ici le lancement de la deuxième étape (MR2)
+        // Utilisez la structure similaire à lanceEtape1
+        return 0; // Retour factice
+    }
+
+    public int lanceEtape3(String entree, String sortie) throws Exception {
+        // Implémentez ici le lancement de la troisième étape (MR3)
+        // Utilisez la structure similaire à lanceEtape1
+        return 0; // Retour factice
+    }
+
+    public int lanceEtape4(String entree, String sortie, int nombreDocuments) throws Exception {
+        // Implémentez ici le lancement de la quatrième étape (MR4)
+        // Utilisez la structure similaire à lanceEtape1
+        // N'oubliez pas de transmettre le nombre de documents à la configuration comme indiqué dans MR4
+        return 0; // Retour factice
+    }
+}

@@ -1,0 +1,60 @@
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+
+import java.io.IOException;
+
+public class SearchTFIDF {
+
+    public static class SearchMapper extends Mapper<Object, Text, Text, Text> {
+
+        private String motRecherche;
+
+        @Override
+        protected void setup(Context context) throws IOException, InterruptedException {
+            motRecherche = context.getConfiguration().get("motRecherche");
+        }
+
+        @Override
+        public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
+            String ligne = value.toString();
+            String[] parties = ligne.split("\\s+");
+            String motFichier = parties[0].split("\\|")[0];
+            if (motFichier.equals(motRecherche)) {
+                String nomFichier = parties[0].split("\\|")[1];
+                String tfidf = parties[1];
+                context.write(new Text(nomFichier), new Text(tfidf));
+            }
+        }
+    }
+
+    public static class SearchReducer extends Reducer<Text, Text, Text, Text> {
+        @Override
+        public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
+            for (Text value : values) {
+                context.write(key, value);
+            }
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        Configuration conf = new Configuration();
+        conf.set("motRecherche", args[0]);
+        Job job = Job.getInstance(conf, "SearchTFIDF");
+        job.setJarByClass(SearchTFIDF.class);
+        job.setInputFormatClass(TextInputFormat.class);
+        job.setOutputFormatClass(TextOutputFormat.class);
+        job.setMapperClass(SearchMapper.class);
+        job.setReducerClass(SearchReducer.class);
+        job.setOutputKeyClass(Text.class);
+        job.setOutputValueClass(Text.class);
+        TextInputFormat.addInputPath(job, new Path(args[1]));
+        TextOutputFormat.setOutputPath(job, new Path(args[2]));
+        System.exit(job.waitForCompletion(true) ? 0 : 1);
+    }
+}
